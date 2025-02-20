@@ -26,8 +26,10 @@ jobs:
       # Step 3: Install dependencies
       - name: Install dependencies
         run: |
+          apt install npm
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          npm install -g aws-cdk
           pip install aws-cdk-lib  # Install AWS CDK dependencies
 
       # Step 4: Configure AWS credentials
