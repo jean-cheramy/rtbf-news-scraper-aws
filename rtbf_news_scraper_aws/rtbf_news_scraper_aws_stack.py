@@ -6,7 +6,9 @@ from aws_cdk import (
 from aws_cdk import (
     aws_s3 as s3,
     aws_lambda as _lambda,
-    aws_iam as iam
+    aws_iam as iam,
+    aws_stepfunctions as sfn,
+    aws_stepfunctions_tasks as tasks
 )
 from constructs import Construct
 import aws_cdk as cdk
@@ -46,5 +48,17 @@ class RtbfNewsScraperAwsStack(Stack):
         )
         cdk.CfnOutput(self, "LambdaFunctionArn", value=urls_lambda.function_arn)
 
-        #urls_bucket.grant_write(urls_lambda)
-        #urls_bucket.grant_read(urls_lambda)
+        # Step Function task to invoke the Lambda function
+        get_urls_task = tasks.LambdaInvoke(self, "InvokeLambda",
+            lambda_function=urls_lambda,
+            result_path="$.lambda_result"  # Store result in state machine context
+        )
+
+        # Step Function definition (one step for now)
+        definition = get_urls_task
+
+        # Create Step Function
+        state_machine = sfn.StateMachine(self, "RTBFScrapingStateMachine",
+            definition=definition,
+            timeout=cdk.Duration.minutes(15)
+        )
