@@ -1,0 +1,45 @@
+name: Deploy Lambda Function with CDK
+
+on:
+  push:
+    branches:
+      - main  # This will trigger the workflow on push to the main branch
+  pull_request:
+    branches:
+      - main  # This will trigger the workflow on pull requests to the main branch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # The runner environment for your job
+
+    steps:
+      # Step 1: Checkout the code
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      # Step 2: Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.12'  # Specify the Python version you are using
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install aws-cdk-lib  # Install AWS CDK dependencies
+
+      # Step 4: Configure AWS credentials
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1  # Specify your AWS region
+
+      # Step 5: Deploy with AWS CDK
+      - name: Deploy CDK Stack
+        run: |
+          cdk bootstrap  # Bootstrap the AWS environment if needed
+          cdk deploy --require-approval never  # Deploy the CDK stack without manual approval
