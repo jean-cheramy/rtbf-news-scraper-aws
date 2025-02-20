@@ -4,12 +4,12 @@ import aws_cdk as cdk
 from aws_cdk import (
     Stack)
 from aws_cdk import (
-    core as cdk,
     aws_s3 as s3,
     aws_lambda as _lambda,
     aws_iam as iam
 )
 from constructs import Construct
+import aws_cdk as cdk
 
 
 class RtbfNewsScraperAwsStack(Stack):
