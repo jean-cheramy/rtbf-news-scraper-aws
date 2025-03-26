@@ -59,7 +59,7 @@ class RtbfNewsScraperAwsStack(Stack):
             .next(
                 sfn.Choice(self, "CheckUrls")
                 .when(
-                    sfn.Condition.is_present("$.urls"),
+                    sfn.Condition.is_present("$.to_process_urls_id"),
                     scrape_urls
                     .next(topic_modeling_task)
                 )

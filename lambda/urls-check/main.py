@@ -45,7 +45,10 @@ def handler(event, context):
 def extract_urls(response, image_regex, processed_file_name, to_process_filename):
     soup = BeautifulSoup(response.content, "xml")
     urls = [loc.text.strip() for loc in soup.find_all("loc") if not image_regex.match(loc.text.strip())]
-    processed_url = load_from_s3(processed_file_name)
-    to_process_url = set(urls).difference(set(processed_url))
-    save_into_s3(to_process_filename, json.dumps(list(to_process_url)))
-    return {"statuscode": 200, "#urls": len(to_process_url),"urls": json.dumps({"urls": list(to_process_url)})}
+    urls_id = [re.split("-", url)[-1] for url in urls]
+    processed_url_id = load_from_s3(processed_file_name)
+    to_process_url_id = set(urls_id).difference(set(processed_url_id))
+    save_into_s3(to_process_filename, json.dumps(list(to_process_url_id)))
+    return {"statuscode": 200, "#urls": len(to_process_url_id),
+            "to_process_urls_id": json.dumps(list(to_process_url_id)),
+            "url": "https://www.rtbf.be/article/"}
