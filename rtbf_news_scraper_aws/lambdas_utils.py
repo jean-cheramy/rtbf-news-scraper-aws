@@ -68,7 +68,7 @@ scrape_url_lambda_data = {"name": "ScrapeUrlsLambda",
                           }
 
 topic_modeling_lambda_data = {"name": "TopicModelingLambda",
-                              "memory": 10240,
+                              "memory": 3008,
                               "path": "../lambda/topic_modeling",
                               "timeout": 15,
                               "environment": {

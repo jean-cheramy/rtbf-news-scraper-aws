@@ -1,4 +1,4 @@
-bertopic==0.15.0
+bertopic
 numpy
 pandas
 boto3

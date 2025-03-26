@@ -47,7 +47,7 @@ get_urls_role_data = {
     "service": "lambda.amazonaws.com",
     "policies": [
         "service-role/AWSLambdaBasicExecutionRole",
-        "AmazonS3ReadOnlyAccess",
+        "AmazonS3FullAccess",
         "AmazonDynamoDBFullAccess"
     ]
 }
