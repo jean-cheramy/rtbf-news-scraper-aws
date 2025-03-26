@@ -1,64 +1,83 @@
-import os
-
 import aws_cdk as cdk
 from aws_cdk import (
-    Stack)
-from aws_cdk import (
+    Stack,
+    Duration,
     aws_s3 as s3,
-    aws_lambda as _lambda,
-    aws_iam as iam,
-    aws_stepfunctions as sfn,
-    aws_stepfunctions_tasks as tasks
+    aws_stepfunctions as sfn
 )
 from constructs import Construct
-import aws_cdk as cdk
+
+from dynamodb_utils import create_dynamodb_table, articles_table_data
+from lambdas_utils import build_lambda_docker, get_urls_lambda_data, scrape_url_lambda_data, topic_modeling_lambda_data
+from roles_utils import build_roles, get_urls_role_data, scrape_url_role_data, topic_modeling_role_data
+from stepfunctions_utils import get_urls_task_data, scrape_url_map_data, topic_modeling_data, define_task, define_map
 
 
 class RtbfNewsScraperAwsStack(Stack):
-
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
 
-        # Create an S3 bucket
         urls_bucket = s3.Bucket(self, "UrlsBucket",
                            removal_policy=cdk.RemovalPolicy.DESTROY)
+        # -----------------------------------------------
+        # ROLES INITIALIZATION
+        # -----------------------------------------------
+        get_urls_lambda_role = build_roles(self, get_urls_role_data)
+        scrape_url_lambda_role = build_roles(self, scrape_url_role_data)
+        topic_modeling_lambda_role = build_roles(self, topic_modeling_role_data)
 
-        # IAM Role for Lambda to access S3
-        urls_lambda_role = iam.Role(self, "LambdaS3Role",
-            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
-            managed_policies=[
-                iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole"),
-                iam.ManagedPolicy.from_aws_managed_policy_name("AmazonS3FullAccess")
-            ]
+        # -----------------------------------------------
+        # DYNAMODB INITIALIZATION
+        # -----------------------------------------------
+        articles_table = create_dynamodb_table(scope, articles_table_data)
+
+        # -----------------------------------------------
+        # LAMBDAS INITIALIZATION
+        # -----------------------------------------------
+        get_urls_lambda = build_lambda_docker(self, get_urls_lambda_data, get_urls_lambda_role, urls_bucket, articles_table)
+        scrape_url_function = build_lambda_docker(self, scrape_url_lambda_data, scrape_url_lambda_role, urls_bucket, articles_table)
+        topic_modeling_lambda = build_lambda_docker(self, topic_modeling_lambda_data, topic_modeling_lambda_role, articles_table)
+
+        # -----------------------------------------------
+        # GRANTING PERMISSIONS TO LAMBDAS
+        # -----------------------------------------------
+        articles_table.grant_read_write_data(get_urls_lambda)
+        articles_table.grant_read_write_data(topic_modeling_lambda)
+        articles_table.grant_write_data(scrape_url_function)
+
+        # -----------------------------------------------
+        # STEPFUNCTION TASKS
+        # -----------------------------------------------
+        get_urls_task = define_task(self, get_urls_task_data, get_urls_lambda, articles_table)
+        scrape_urls = define_map(self, scrape_url_map_data, scrape_url_function, articles_table)
+        topic_modeling_task = define_task(self, topic_modeling_data, topic_modeling_lambda, articles_table)
+
+        # Build the workflow
+        definition = (
+            get_urls_task
+            .next(
+                sfn.Choice(self, "CheckUrls")
+                .when(
+                    sfn.Condition.is_present("$.urls"),
+                    scrape_urls
+                    .next(topic_modeling_task)
+                )
+                .otherwise(
+                    sfn.Fail(
+                        self,
+                        "NoUrlsFound",
+                        cause="No URLs were returned",
+                        error="EmptyUrlList"
+                    )
+                )
+            )
         )
 
-        urls_lambda = _lambda.DockerImageFunction(
-            self, "GetUrlsSitemap",
-            memory_size=2048,
-            code=_lambda.DockerImageCode.from_image_asset(
-                directory=os.path.join(os.path.dirname(__file__), "../lambda/urls-check")),
-            timeout=cdk.Duration.minutes(15),
-            environment={
-                "BUCKET_NAME": urls_bucket.bucket_name,
-                "FILE_NAME": "processed_urls.json",
-                "RTBF_URL" : "https://www.rtbf.be/site-map/articles5000.xml"
-            },
-            role=urls_lambda_role
-        )
-        cdk.CfnOutput(self, "LambdaFunctionArn", value=urls_lambda.function_arn)
-
-        # Step Function task to invoke the Lambda function
-        get_urls_task = tasks.LambdaInvoke(self, "InvokeLambda",
-            lambda_function=urls_lambda,
-            result_path="$.lambda_result"  # Store result in state machine context
-        )
-
-        # Step Function definition (one step for now)
-        definition = get_urls_task
-
-        # Create Step Function
-        state_machine = sfn.StateMachine(self, "RTBFScrapingStateMachine",
+        state_machine = sfn.StateMachine(
+            self,
+            "RtbfNewsScraperStateMachine",
             definition=definition,
-            timeout=cdk.Duration.minutes(15)
+            timeout=Duration.minutes(30),
+            state_machine_type=sfn.StateMachine.Type.STANDARD,
         )

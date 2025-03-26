@@ -48,4 +48,4 @@ def extract_urls(response, image_regex, processed_file_name, to_process_filename
     processed_url = load_from_s3(processed_file_name)
     to_process_url = set(urls).difference(set(processed_url))
     save_into_s3(to_process_filename, json.dumps(list(to_process_url)))
-    return {"statuscode": 200, "#urls": len(to_process_url),"urls": json.dumps({"urls": to_process_url})}
+    return {"statuscode": 200, "#urls": len(to_process_url),"urls": json.dumps({"urls": list(to_process_url)})}
