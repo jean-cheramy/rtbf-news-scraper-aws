@@ -1,0 +1,7 @@
+bertopic==0.15.0
+numpy
+pandas
+boto3
+sentence-transformers
+umap-learn
+hdbscan

@@ -7,10 +7,11 @@ from aws_cdk import (
 from aws_cdk.aws_dynamodb import Table
 from aws_cdk.aws_iam import Role
 from aws_cdk.aws_s3 import Bucket
+from constructs import Construct
 
 
 def build_lambda_docker(
-        scope: cdk.Construct,
+        scope: Construct,
         lambda_data: dict,
         role: Role,
         urls_bucket: Bucket | None = None,
@@ -46,7 +47,7 @@ def build_lambda_docker(
     )
 
 
-get_urls_lambda_data = {"name": "GetUrlsSitemap",
+get_urls_lambda_data = {"name": "GetUrlsSitemapLambda",
                     "memory": 2048,
                     "path": "../lambda/urls-check",
                     "timeout": 15,
@@ -56,7 +57,7 @@ get_urls_lambda_data = {"name": "GetUrlsSitemap",
                     }
                     }
 
-scrape_url_lambda_data = {"name": "ScrapeUrl",
+scrape_url_lambda_data = {"name": "ScrapeUrlsLambda",
                           "memory": 512,
                           "path": "../lambda/scrape-url",
                           "timeout": 1,
@@ -66,7 +67,7 @@ scrape_url_lambda_data = {"name": "ScrapeUrl",
                           }
                           }
 
-topic_modeling_lambda_data = {"name": "TopicModeling",
+topic_modeling_lambda_data = {"name": "TopicModelingLambda",
                               "memory": 10240,
                               "path": "../lambda/topic_modeling",
                               "timeout": 15,
